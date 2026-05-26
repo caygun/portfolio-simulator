@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portföy Analiz </title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root {
+  --bg:    #05080e;
+  --surf:  #090e17;
+  --card:  #0d1520;
+  --bdr:   #132030;
+  --bdr2:  #1c2e42;
+  --text:  #ccd8e8;
+  --sub:   #8a9db5;
+  --muted: #4d6278;
+  --dim:   #162030;
+  --cyan:  #38bdf8;
+  --green: #34d399;
+  --red:   #f87171;
+  --orange:#fb923c;
+  --gold:  #f59e0b;
+  --teal:  #2dd4bf;
+  --blue:  #60a5fa;
+}
+*,*::before,*::after { box-sizing:border-box; margin:0; padding:0; }
+html { font-size:13px; }
+body { background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; line-height:1.4; min-height:100vh; }
+
+/* ── HEADER ─────────────────────────────────────────────────────── */
+.header { background:var(--surf); border-bottom:1px solid var(--bdr); position:sticky; top:0; z-index:50; }
+.header-top { display:flex; align-items:center; justify-content:space-between; padding:11px 16px; }
+.brand { display:flex; align-items:center; gap:9px; }
+.brand-dot { width:8px; height:8px; border-radius:50%; background:var(--cyan); box-shadow:0 0 8px var(--cyan); }
+.brand-name { font-size:12px; font-weight:700; color:#fff; font-family:monospace; letter-spacing:.06em; }
+.pdf-btn { padding:7px 16px; border-radius:8px; background:rgba(245,158,11,.12); color:var(--gold); border:1px solid rgba(245,158,11,.3); font-size:11px; font-weight:700; cursor:pointer; transition:.2s; font-family:inherit; }
+.pdf-btn:hover { background:rgba(245,158,11,.22); }
+
+/* ── KPI STRIP ───────────────────────────────────────────────────── */
+.kpi-strip { display:grid; grid-template-columns:repeat(8,1fr); border-top:1px solid var(--bdr); }
+.kpi-item { padding:7px 9px; border-right:1px solid var(--bdr); }
+.kpi-item:last-child { border-right:none; }
+.kpi-label { font-size:8px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; font-weight:700; margin-bottom:2px; }
+.kpi-val { font-size:12px; font-weight:700; font-family:monospace; }
+
+/* ── LAYOUT ──────────────────────────────────────────────────────── */
+.container { padding:14px 16px; display:flex; flex-direction:column; gap:14px; max-width:1400px; margin:0 auto; }
+
+/* ── INPUTS ──────────────────────────────────────────────────────── */
+.inputs-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.input-group { display:flex; flex-direction:column; }
+.input-hdr { display:flex; justify-content:space-between; align-items:baseline; font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em; font-weight:700; margin-bottom:6px; }
+.input-wrapper { position:relative; }
+.input-prefix { position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:13px; font-weight:700; color:var(--muted); font-family:monospace; pointer-events:none; }
+.num-input { width:100%; background:var(--card); border:1px solid var(--bdr2); color:var(--text); padding:11px 12px 11px 26px; border-radius:10px; font-size:15px; font-family:monospace; outline:none; transition:.2s; -webkit-appearance:none; }
+.num-input:focus { border-color:var(--cyan); }
+.num-input::-webkit-outer-spin-button, .num-input::-webkit-inner-spin-button { -webkit-appearance:none; }
+
+/* ── DETAILS / ACCORDION ─────────────────────────────────────────── */
+details { background:var(--surf); border:1px solid var(--bdr); border-radius:12px; padding:10px 12px; }
+details[open] { padding-bottom:14px; }
+summary { font-size:10px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; font-weight:700; cursor:pointer; list-style:none; display:flex; align-items:center; gap:8px; user-select:none; }
+summary::-webkit-details-marker { display:none; }
+.sum-bar { width:3px; height:10px; border-radius:2px; flex-shrink:0; }
+
+/* ── CASHFLOW ─────────────────────────────────────────────────────── */
+.cf-form { display:flex; flex-direction:column; gap:8px; margin-top:12px; }
+.cf-row3 { display:grid; grid-template-columns:70px 1fr 1fr; gap:8px; }
+.cf-label { font-size:9px; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.08em; }
+.cf-input { width:100%; background:var(--card); border:1px solid var(--bdr2); color:var(--text); padding:11px 10px; border-radius:10px; font-size:13px; outline:none; font-family:inherit; }
+.cf-input:focus { border-color:var(--cyan); }
+.btn { padding:10px 14px; border-radius:9px; font-size:13px; font-weight:700; cursor:pointer; border:none; font-family:inherit; transition:.15s; }
+.btn-cyan { background:rgba(56,189,248,.08); color:var(--cyan); border:1px solid rgba(56,189,248,.25); }
+.btn-cyan:hover { background:rgba(56,189,248,.16); }
+.btn-muted { background:var(--card); color:var(--muted); border:1px solid var(--bdr); }
+.cf-list { display:flex; flex-direction:column; gap:5px; margin-top:8px; }
+.cf-item { display:flex; justify-content:space-between; align-items:center; padding:8px 11px; background:var(--card); border-radius:8px; border:1px solid var(--bdr); font-size:12px; }
+.cf-remove { background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; padding:0 4px; line-height:1; }
+
+/* ── REHBER (Info) ────────────────────────────────────────────────── */
+.info-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:12px; }
+.info-card { background:var(--card); border:1px solid var(--bdr); border-radius:10px; padding:13px; }
+.info-title { font-size:11px; font-weight:800; color:var(--cyan); margin-bottom:5px; text-transform:uppercase; letter-spacing:.05em; }
+.info-desc { font-size:11px; color:var(--text); line-height:1.5; }
+.info-ex { font-size:10px; color:var(--gold); margin-top:7px; padding-top:7px; border-top:1px dashed var(--bdr); line-height:1.4; }
+
+/* ── TABS ─────────────────────────────────────────────────────────── */
+.tabs { display:grid; grid-template-columns:repeat(5,1fr); gap:4px; background:var(--card); border-radius:11px; padding:3px; border:1px solid var(--bdr); }
+.tab-btn { padding:9px 4px; border-radius:8px; border:none; background:transparent; color:var(--muted); font-size:12px; font-weight:600; cursor:pointer; font-family:inherit; transition:.15s; }
+.tab-btn.active { background:var(--surf); color:var(--text); box-shadow:0 1px 4px rgba(0,0,0,.4); }
+.tab-content { display:none; flex-direction:column; gap:14px; }
+.tab-content.active { display:flex; }
+
+/* ── SLIDERS ─────────────────────────────────────────────────────── */
+.custom-slider { width:100%; height:6px; background:var(--bdr2); border-radius:4px; outline:none; -webkit-appearance:none; appearance:none; cursor:pointer; margin:8px 0 3px; display:block; }
+.custom-slider::-webkit-slider-thumb { -webkit-appearance:none; width:20px; height:20px; border-radius:50%; background:#fff; border:3px solid var(--cyan); cursor:pointer; box-shadow:0 0 0 3px rgba(56,189,248,.2); }
+.slider-green::-webkit-slider-thumb { border-color:var(--green); box-shadow:0 0 0 3px rgba(52,211,153,.2); }
+.slider-gold::-webkit-slider-thumb { border-color:var(--gold); box-shadow:0 0 0 3px rgba(245,158,11,.2); }
+.slider-orange::-webkit-slider-thumb { border-color:var(--orange); box-shadow:0 0 0 3px rgba(251,146,60,.2); }
+.range-labels { display:flex; justify-content:space-between; font-size:9px; color:var(--dim); margin-top:2px; }
+
+/* ── QUICK BTNS ──────────────────────────────────────────────────── */
+.quick-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+.quick-btn { padding:9px 6px; border-radius:9px; background:var(--card); border:1px solid var(--bdr); color:var(--muted); font-size:11px; font-weight:600; cursor:pointer; font-family:inherit; transition:.15s; }
+.quick-btn:hover { border-color:var(--cyan); color:var(--cyan); background:rgba(56,189,248,.05); }
+
+/* ── METRIC CARDS ─────────────────────────────────────────────────── */
+.cards-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+.m-card { background:var(--card); border:1px solid var(--bdr); border-radius:12px; padding:13px 15px; position:relative; overflow:hidden; }
+.m-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; background:linear-gradient(90deg,transparent,rgba(56,189,248,.3),transparent); }
+.m-card-label { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em; font-weight:700; margin-bottom:5px; }
+.m-card-val { font-size:17px; font-weight:700; font-family:monospace; line-height:1.1; }
+.m-card-sub { font-size:10px; color:var(--muted); margin-top:4px; }
+
+/* ── CHART SECTION ────────────────────────────────────────────────── */
+.chart-section { background:var(--surf); border:1px solid var(--bdr); border-radius:16px; padding:16px 14px 12px; }
+.chart-hdr-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; padding-bottom:8px; border-bottom:1px solid var(--bdr); }
+.chart-hdr { display:flex; align-items:center; gap:7px; }
+.chart-indicator { width:3px; height:11px; background:var(--cyan); border-radius:2px; }
+.chart-title-text { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.12em; font-weight:700; }
+.chart-sub-tabs { display:flex; gap:5px; }
+.c-tab { padding:5px 11px; border-radius:6px; border:1px solid var(--bdr2); background:transparent; color:var(--muted); font-size:10px; font-weight:600; cursor:pointer; font-family:inherit; transition:.15s; }
+.c-tab:hover { background:var(--card); color:var(--text); }
+.c-tab.active { background:var(--cyan); color:var(--bg); border-color:var(--cyan); }
+.chart-wrap { position:relative; width:100%; height:300px; }
+
+/* ── MONTE CARLO ─────────────────────────────────────────────────── */
+.mc-params { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.mc-param-card { background:var(--card); border:1px solid var(--bdr); border-radius:10px; padding:12px; }
+.mc-param-name { font-size:10px; font-weight:700; color:var(--text); margin-bottom:3px; display:flex; justify-content:space-between; align-items:center; }
+.mc-param-val { font-size:18px; font-weight:800; font-family:monospace; margin:4px 0; }
+.mc-param-desc { font-size:10px; color:var(--muted); line-height:1.4; }
+.mc-results-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:12px; }
+.mc-result-card { background:var(--card); border:1px solid var(--bdr); border-radius:10px; padding:12px 14px; text-align:center; }
+.mc-result-label { font-size:9px; color:var(--muted); text-transform:uppercase; letter-spacing:.1em; font-weight:700; margin-bottom:5px; }
+.mc-result-val { font-size:20px; font-weight:800; font-family:monospace; }
+.mc-survival-bar { height:8px; background:var(--bdr2); border-radius:4px; margin-top:8px; overflow:hidden; }
+.mc-survival-fill { height:100%; border-radius:4px; transition:width .6s ease; }
+.mc-percentile-table { width:100%; border-collapse:collapse; font-size:12px; font-family:monospace; margin-top:10px; }
+.mc-percentile-table th { padding:7px 10px; text-align:left; color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; border-bottom:1px solid var(--bdr); }
+.mc-percentile-table td { padding:8px 10px; border-bottom:1px solid rgba(19,32,48,.5); }
+
+/* ── YEAR-YIL ROWS ───────────────────────────────────────────────── */
+.yr-list { max-height:340px; overflow-y:auto; display:flex; flex-direction:column; gap:6px; }
+.yr-item { background:var(--card); border:1px solid var(--bdr); border-radius:10px; padding:10px 12px; }
+.yr-item-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:5px; }
+.yr-label { font-size:10px; font-family:monospace; font-weight:700; color:var(--muted); }
+.yr-rate-display { font-size:18px; font-weight:800; font-family:monospace; }
+.yr-remove { background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; line-height:1; padding:0 2px; }
+
+/* ── TABLE ───────────────────────────────────────────────────────── */
+.table-section { background:var(--surf); border:1px solid var(--bdr); border-radius:16px; padding:16px 14px; overflow-x:auto; }
+table { width:100%; border-collapse:collapse; font-family:monospace; font-size:12px; }
+th { padding:7px 9px; text-align:left; color:var(--muted); font-size:9px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; border-bottom:1px solid var(--bdr); white-space:nowrap; }
+td { padding:8px 9px; border-bottom:1px solid rgba(19,32,48,.5); white-space:nowrap; }
+tr:hover td { background:rgba(255,255,255,.012); }
+.bar-mini { display:inline-block; width:36px; height:4px; background:var(--bdr); border-radius:2px; vertical-align:middle; margin-left:5px; overflow:hidden; }
+.bar-mini-fill { height:100%; border-radius:2px; }
+
+/* ── COMPARE ─────────────────────────────────────────────────────── */
+.sc-item { display:flex; justify-content:space-between; align-items:center; padding:10px 13px; background:var(--card); border-radius:10px; border:1px solid var(--bdr); margin-bottom:6px; }
+
+/* ── SCROLLBAR ───────────────────────────────────────────────────── */
+::-webkit-scrollbar { width:4px; height:4px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:var(--bdr2); border-radius:4px; }
+
+/* ── PDF MODAL ───────────────────────────────────────────────────── */
+#pdf-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.88); z-index:1000; overflow-y:auto; padding:16px; }
+#pdf-overlay.open { display:flex; justify-content:center; align-items:flex-start; }
+#pdf-box { background:#fff; border-radius:16px; width:100%; max-width:920px; margin:8px auto; }
+.pdf-toolbar { padding:14px 22px; border-bottom:2px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; background:#fff; border-radius:16px 16px 0 0; z-index:10; }
+.pdf-print-btn { padding:9px 20px; border-radius:9px; background:#0f172a; color:#fff; border:none; font-size:13px; font-weight:700; cursor:pointer; }
+.pdf-close-btn { padding:9px 16px; border-radius:9px; background:#f1f5f9; color:#64748b; border:none; font-size:13px; cursor:pointer; }
+.pdf-body { padding:22px 26px; font-family:-apple-system,Arial,sans-serif; color:#0f172a; }
+.pdf-section-title { font-size:11px; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:.08em; margin:20px 0 10px; padding-bottom:6px; border-bottom:2px solid #e2e8f0; }
+.pdf-section-title:first-child { margin-top:0; }
+.pdf-grid4 { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:4px; }
+.pdf-grid3 { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-bottom:4px; }
+.pdf-mcard { background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:11px 13px; }
+.pdf-mcard-label { font-size:9px; color:#94a3b8; text-transform:uppercase; letter-spacing:.1em; font-weight:700; margin-bottom:4px; }
+.pdf-mcard-val { font-size:16px; font-weight:800; font-family:monospace; }
+.pdf-mcard-sub { font-size:9px; color:#94a3b8; margin-top:3px; }
+#pdf-table { width:100%; border-collapse:collapse; font-size:11px; margin-top:8px; }
+#pdf-table th { padding:7px 9px; text-align:left; background:#0f172a; color:#fff; font-size:9px; text-transform:uppercase; letter-spacing:.07em; font-weight:700; }
+#pdf-table td { padding:6px 9px; border-bottom:1px solid #f1f5f9; font-family:monospace; }
+
+/* ── SUGGESTIONS SECTION ─────────────────────────────────────────── */
+.suggestions-section { background:var(--surf); border:1px solid var(--bdr); border-radius:16px; padding:20px; }
+.sug-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:14px; }
+.sug-card { background:var(--card); border:1px solid var(--bdr); border-radius:10px; padding:14px; }
+.sug-title { font-size:12px; font-weight:800; color:var(--cyan); margin-bottom:4px; display:flex; align-items:center; gap:7px; }
+.sug-icon { font-size:14px; }
+.sug-desc { font-size:11px; color:var(--sub); line-height:1.5; }
+.sug-why { font-size:10px; color:var(--gold); margin-top:6px; padding-top:6px; border-top:1px dashed var(--bdr); line-height:1.4; }
+.sug-badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:9px; font-weight:700; background:rgba(52,211,153,.12); color:var(--green); border:1px solid rgba(52,211,153,.25); margin-left:auto; }
+
+@media print {
+  body { background:#fff !important; color:#000 !important; }
+  .header, .container > *:not(#print-content) { display:none !important; }
+  #print-content { display:block !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────────────── -->
+<div class="header">
+  <div class="header-top">
+    <div class="brand">
+      <div class="brand-dot"></div>
+      <div class="brand-name">PORTFÖY ANALİZ MERKEZİ</div>
+    </div>
+    <button class="pdf-btn" onclick="openPDF()">⬇ PDF Raporu Al</button>
+  </div>
+  <div class="kpi-strip" id="kpi-strip" style="display:none">
+    <div class="kpi-item"><div class="kpi-label">Son Bakiye</div><div class="kpi-val" id="kpi-balance" style="color:var(--cyan)">—</div></div>
+    <div class="kpi-item"><div class="kpi-label">Reel Bakiye</div><div class="kpi-val" id="kpi-real" style="color:var(--teal)">—</div></div>
+    <div class="kpi-item"><div class="kpi-label">CAGR / XIRR</div><div class="kpi-val" id="kpi-cagr">—</div></div>
+    <div class="kpi-item"><div class="kpi-label">Net Kazanç</div><div class="kpi-val" id="kpi-gain">—</div></div>
+    <div class="kpi-item"><div class="kpi-label">Max DD / Vol</div><div class="kpi-val" id="kpi-risk" style="color:var(--red)">—</div></div>
+    <div class="kpi-item"><div class="kpi-label">Break-Even</div><div class="kpi-val" id="kpi-be" style="color:var(--gold)">—</div></div>
+    <div class="kpi-item"><div class="kpi-label">Sharpe / Sortino</div><div class="kpi-val" id="kpi-ratios">—</div></div>
+    <div class="kpi-item"><div class="kpi-label">Sürdürülebilir</div><div class="kpi-val" id="kpi-survive">—</div></div>
+  </div>
+</div>
+
+<!-- ── MAIN ─────────────────────────────────────────────────────────── -->
+<div class="container">
+
+  <!-- REHBER -->
+  <details>
+    <summary><span class="sum-bar" style="background:var(--blue)"></span>GELİŞMİŞ METRİK VE ANALİZ REHBERİ</summary>
+    <div class="info-grid">
+      <div class="info-card">
+        <div class="info-title">CAGR &amp; XIRR</div>
+        <div class="info-desc"><strong>CAGR</strong> (Bileşik Yıllık Büyüme Oranı): Paranızın başlangıçtan sona, hiç dalgalanmamış gibi ne hızla büyüdüğünü gösterir. Karşılaştırma için kolay bir temel metriktir. <strong>XIRR</strong> ise nakit ekleme ve çekme zamanlamalarını hesaba katarak gerçek getiriyi ölçer.</div>
+        <div class="info-ex">Örnek: 100K TL, 15 yılda 800K TL'ye ulaştı → CAGR %15.1. Ama 5. yılda 50K TL daha eklendiyse bu para ayrı bir başlangıç noktası oluşturur; XIRR tüm bu karmaşıklığı tek bir yüzdeye indirger.</div>
+      </div>
+      <div class="info-card">
+        <div class="info-title">TWRR (Zaman Ağırlıklı Getiri)</div>
+        <div class="info-desc">Dışarıdan yapılan para eklemeleri ve çekimlerinin etkisini soyutlayarak yalnızca yatırım stratejisinin ne kadar başarılı olduğunu ölçer. Fon yöneticileri standart olarak bu metriği kullanır.</div>
+        <div class="info-ex">Örnek: Piyasa tabanındayken şanssızlıkla tüm birikimini koydunuz ve kayıp yaşadınız. TWRR sizin zamanlama kararınızı paranteze alır, stratejinin "saf" başarısını gösterir.</div>
+      </div>
+      <div class="info-card">
+        <div class="info-title">Max DD &amp; Volatilite</div>
+        <div class="info-desc"><strong>Max Drawdown</strong>: Portföy zirvesinden dipine kadar yaşanan en büyük kayıp yüzdesidir — psikolojik dayanıklılık için kritik bir gösterge. <strong>Volatilite</strong>: Yıllık getirilerin standart sapması; portföyün ne kadar "hırçın" dalgalandığını ölçer.</div>
+        <div class="info-ex">Örnek: 1 Milyon TL'ye ulaşan portföyünüz krizde 650K'ya düştüyse Max DD -%35'tir. Volatilitesi %5 olan tahvil portföyü uyurken, %40 olan bir hisse portföyü kâbus yaşatabilir.</div>
+      </div>
+      <div class="info-card">
+        <div class="info-title">Sharpe, Sortino &amp; Calmar</div>
+        <div class="info-desc"><strong>Sharpe</strong>: Alınan toplam riske karşı elde edilen fazla getiri. <strong>Sortino</strong>: Yalnızca negatif volatiliteyi (zararlı riski) dikkate alır — Sharpe'ın daha adil versiyonu. <strong>Calmar</strong>: CAGR'ın Max Drawdown'a oranı; uzun vadeli verimlilik ölçütü. Hepsinde >1.0 güçlü kabul edilir.</div>
+        <div class="info-ex">Örnek: %25 getiri sağlayan iki portföyden biri %8, diğeri %30 volatiliteyle bunu başardıysa, az dalgalananın Sharpe değeri çok daha yüksek çıkar. Aynı kâr, çok daha az "uyku kaybı".</div>
+      </div>
+      <div class="info-card">
+        <div class="info-title">Monte Carlo Simülasyonu</div>
+        <div class="info-desc">Belirlediğiniz ortalama getiri ve volatilite parametrelerine göre <strong>binlerce farklı rastgele senaryo</strong> üretilir. Her senaryoda getiriler normal dağılımla rasgeleleştirilir — kötü yılların peş peşe gelme, krizlerin beklenmedik anda vurma olasılıkları dahil. %10, %50 ve %90 bantları güven aralığını gösterir.</div>
+        <div class="info-ex">Örnek: Ort. getiri %25, volatilite %20 ve 1000 senaryo ile simülasyon çalıştırdınız. Senaryoların %73'ü 15 yıl sonunda pozitif bakiyeyle kapandıysa hayatta kalma oranınız %73'tür.</div>
+      </div>
+      <div class="info-card">
+        <div class="info-title">Sürdürülebilirlik &amp; Break-Even</div>
+        <div class="info-desc"><strong>Sürdürülebilirlik</strong>: Belirlenen çekim miktarıyla portföyün tükenmeyeceği anlamına gelir. <strong>Break-Even (Kırılma Yılı)</strong>: Portföyün o yıl ürettiği yıllık getirinin, aynı yıl yapılan toplam çekimi geçtiği andır. Bu eşiği geçen portföy teorik olarak "sonsuza" yaşar.</div>
+        <div class="info-ex">Örnek: 12. yılda portföyünüz 3.2M TL'ye ulaştı ve yıllık %15 getiriyle 480K TL gelir üretiyor. Yıllık çekiminiz 420K TL ise bu yıl Break-Even noktanızdır — artık portföy kendini besliyor.</div>
+      </div>
+    </div>
+  </details>
+
+  <!-- TEMEL PARAMETRELER -->
+  <div class="inputs-grid">
+    <div class="input-group">
+      <div class="input-hdr"><span>Ana Para</span><span id="lbl-capital" style="color:var(--cyan)">$100,000</span></div>
+      <div class="input-wrapper"><span class="input-prefix" style="color:var(--cyan)">$</span><input type="number" id="inp-capital" class="num-input" value="100000" oninput="calculate()"></div>
+    </div>
+    <div class="input-group">
+      <div class="input-hdr"><span>Aylık Çekim</span><span id="lbl-monthly" style="color:var(--orange)">$1,800</span></div>
+      <div class="input-wrapper"><span class="input-prefix" style="color:var(--orange)">$</span><input type="number" id="inp-monthly" class="num-input" value="1800" oninput="calculate()"></div>
+    </div>
+    <div class="input-group">
+      <div class="input-hdr"><span>Enflasyon (%)</span><span id="lbl-inf" style="color:var(--teal)">%40</span></div>
+      <div class="input-wrapper"><span class="input-prefix" style="color:var(--teal)">%</span><input type="number" id="inp-inf" class="num-input" style="padding-left:26px" value="40" step="1" min="0" oninput="calculate()"></div>
+    </div>
+  </div>
+
+  <!-- NAKİT AKIŞLARI -->
+  <details>
+    <summary><span class="sum-bar" style="background:var(--teal)"></span>NAKİT AKIŞLARI <span id="cf-badge" style="color:var(--teal); margin-left:4px"></span></summary>
+    <div class="cf-form">
+      <div class="cf-row3">
+        <div><div class="cf-label">Yıl</div><input type="number" id="cf-year" class="cf-input" value="3" min="1"></div>
+        <div><div class="cf-label">Tutar (+ giriş / − çekim)</div><input type="number" id="cf-amount" class="cf-input" value="10000"></div>
+        <div><div class="cf-label">Not</div><input type="text" id="cf-note" class="cf-input" placeholder="opsiyonel"></div>
+      </div>
+      <button class="btn btn-cyan" onclick="addCashflow()">+ Ekle</button>
+      <div class="cf-list" id="cf-list"></div>
+    </div>
+  </details>
+
+  <!-- ANA TABS -->
+  <div class="tabs">
+    <button class="tab-btn active" id="tbtn-proj" onclick="switchTab('proj',this)">Projeksiyon</button>
+    <button class="tab-btn" id="tbtn-find" onclick="switchTab('find',this)">Getiri Bul</button>
+    <button class="tab-btn" id="tbtn-custom" onclick="switchTab('custom',this)">Yıl Yıl</button>
+    <button class="tab-btn" id="tbtn-mc" onclick="switchTab('mc',this)">Monte Carlo</button>
+    <button class="tab-btn" id="tbtn-compare" onclick="switchTab('compare',this)">Karşılaştır</button>
+  </div>
+
+  <!-- TAB: Projeksiyon -->
+  <div id="tab-proj" class="tab-content active">
+    <div>
+      <div class="input-hdr"><span>Süre</span><span id="lbl-years" style="color:var(--cyan);font-size:17px;font-family:monospace;font-weight:800">15 Yıl</span></div>
+      <input type="range" id="slip-years" class="custom-slider" min="1" max="30" value="15" oninput="onProjChange()">
+      <div class="range-labels"><span>1 yıl</span><span>30 yıl</span></div>
+    </div>
+    <div>
+      <div class="input-hdr"><span>Yıllık Getiri</span><span id="lbl-rate" style="color:var(--green);font-size:17px;font-family:monospace;font-weight:800">%22</span></div>
+      <input type="range" id="slip-rate" class="custom-slider slider-green" min="-20" max="150" value="22" step="0.5" oninput="onProjChange()">
+      <div class="range-labels"><span>-20%</span><span>150%</span></div>
+    </div>
+    <div>
+      <div style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-weight:700;margin-bottom:8px">Hızlı Senaryolar</div>
+      <div class="quick-grid">
+        <button class="quick-btn" onclick="quickSet(15,22)">⚡ 15y · %22</button>
+        <button class="quick-btn" onclick="quickSet(15,10)">⚡ 15y · %10</button>
+        <button class="quick-btn" onclick="quickSet(10,15)">⚡ 10y · %15</button>
+        <button class="quick-btn" onclick="quickSet(20,18)">⚡ 20y · %18</button>
+        <button class="quick-btn" onclick="quickSet(10,30)">⚡ 10y · %30</button>
+        <button class="quick-btn" onclick="quickSet(20,8)">⚡ 20y · %8</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Getiri Bul -->
+  <div id="tab-find" class="tab-content">
+    <div>
+      <div class="input-hdr"><span>Süre</span><span id="lbl-fyears" style="color:var(--cyan);font-size:17px;font-family:monospace;font-weight:800">10 Yıl</span></div>
+      <input type="range" id="slip-fyears" class="custom-slider" min="1" max="30" value="10" oninput="document.getElementById('lbl-fyears').innerText=this.value+' Yıl'; calculate()">
+      <div class="range-labels"><span>1 yıl</span><span>30 yıl</span></div>
+    </div>
+    <div>
+      <div class="input-hdr"><span>Hedef Tutar (USD)</span></div>
+      <input type="number" id="inp-ftarget" class="num-input" style="padding-left:12px" value="1000000" oninput="calculate()">
+    </div>
+    <div style="background:rgba(52,211,153,.05);border:1px solid rgba(52,211,153,.2);border-radius:14px;padding:18px;">
+      <div id="find-lbl" style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px">10 yılda hedeflenen tutar için</div>
+      <div id="find-result" style="font-size:36px;font-weight:800;color:var(--green);font-family:monospace">%0.00</div>
+      <div style="font-size:11px;color:var(--muted);margin-top:5px">yıllık ortalama getiri gerekli</div>
+    </div>
+  </div>
+
+  <!-- TAB: Yıl Yıl -->
+  <div id="tab-custom" class="tab-content">
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-cyan" style="flex:1" onclick="addYearRow()">+ Yıl Ekle</button>
+      <button class="btn btn-muted" style="flex:1" onclick="toggleBulk()">Toplu Giriş</button>
+    </div>
+    <div id="bulk-wrapper" style="display:none;background:var(--card);padding:12px;border-radius:10px">
+      <div style="font-size:10px;color:var(--muted);margin-bottom:6px">Virgül/boşluk ile ayır (her değer bir yıl):</div>
+      <textarea id="bulk-input" rows="2" style="width:100%;background:var(--bg);color:#fff;border:1px solid var(--bdr2);padding:8px;border-radius:7px;font-family:monospace;font-size:13px;outline:none;resize:vertical" placeholder="15, 22, -5, 30, 18, 8, 25, -3..."></textarea>
+      <button class="btn btn-cyan" style="width:100%;margin-top:8px" onclick="applyBulk()">Uygula</button>
+    </div>
+    <div class="yr-list" id="yr-list"></div>
+  </div>
+
+  <!-- TAB: Monte Carlo -->
+  <div id="tab-mc" class="tab-content">
+    <!-- Parametre Açıklama Kartı -->
+    <div style="background:rgba(56,189,248,.04);border:1px solid rgba(56,189,248,.15);border-radius:12px;padding:14px 16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;display:flex;align-items:center;gap:7px">
+        <span style="width:3px;height:11px;background:var(--cyan);border-radius:2px;display:inline-block"></span>
+        Monte Carlo Simülasyonu Nedir?
+      </div>
+      <div style="font-size:11px;color:var(--sub);line-height:1.6">
+        Monte Carlo, belirli parametrelere dayanarak <strong style="color:var(--text)">binlerce farklı gelecek senaryosu</strong> üretir. Her yıl için, ortalama getiri etrafında <em>normal dağılım</em> kullanılarak rastgele bir getiri üretilir — kötü yılların peş peşe gelmesi veya krizlerin beklenmedik anda vurması gibi gerçek hayat koşulları test edilir. Sonuçlar %10, %25, %50, %75, %90 bantlarıyla görselleştirilir.
+      </div>
+    </div>
+
+    <!-- Parametreler -->
+    <div class="mc-params">
+      <div class="mc-param-card">
+        <div class="mc-param-name">
+          Ortalama Getiri
+          <span style="font-size:9px;color:var(--muted)">(Projeksiyon'dan alınır)</span>
+        </div>
+        <div class="mc-param-val" id="mc-mean-display" style="color:var(--green)">%22</div>
+        <div class="mc-param-desc">Her yıl için üretilen rastgele getirilerin ortalandığı merkez değer. Projeksiyon sekmesindeki yıllık getiri oranınızdan otomatik alınır.</div>
+      </div>
+      <div class="mc-param-card">
+        <div class="mc-param-name">
+          Volatilite (Standart Sapma)
+          <span id="mc-vol-badge" style="font-size:14px;font-weight:800;font-family:monospace;color:var(--gold)">%20</span>
+        </div>
+        <input type="range" id="mc-vol-slider" class="custom-slider slider-gold" min="5" max="70" value="20" step="1" oninput="onMCChange()">
+        <div class="range-labels"><span>%5 (sakin)</span><span>%70 (çok hırçın)</span></div>
+        <div class="mc-param-desc">Getirilerin ortalama etrafındaki yayılma genişliği. Düşük volatilite → tahvil/banka tipi istikrar. Yüksek volatilite → hisse senedi/kripto gibi keskin dalgalanmalar. BIST hisseleri için %25–40 gerçekçidir.</div>
+      </div>
+      <div class="mc-param-card">
+        <div class="mc-param-name">
+          Süre
+          <span style="font-size:9px;color:var(--muted)">(Projeksiyon'dan alınır)</span>
+        </div>
+        <div class="mc-param-val" id="mc-years-display" style="color:var(--cyan)">15 yıl</div>
+        <div class="mc-param-desc">Simülasyon kaç yıl boyunca ilerleyecek. Uzun vadede belirsizlik artar — bantların açılması normaldir.</div>
+      </div>
+      <div class="mc-param-card">
+        <div class="mc-param-name">
+          İterasyon Sayısı
+          <span id="mc-iter-badge" style="font-size:14px;font-weight:800;font-family:monospace;color:var(--orange)">500</span>
+        </div>
+        <input type="range" id="mc-iter-slider" class="custom-slider slider-orange" min="100" max="2000" step="100" value="500" oninput="onMCChange()">
+        <div class="range-labels"><span>100 (hızlı)</span><span>2000 (hassas)</span></div>
+        <div class="mc-param-desc">Kaç farklı hayat senaryosu simüle edilecek. Sayı arttıkça istatistiksel hassasiyet yükselir, hesaplama süresi uzar. 500 çoğu senaryo için ideal dengedir.</div>
+      </div>
+    </div>
+
+    <!-- Sonuç Kartları -->
+    <div class="mc-results-grid" id="mc-results-grid" style="display:none">
+      <div class="mc-result-card">
+        <div class="mc-result-label">Hayatta Kalma Oranı</div>
+        <div class="mc-result-val" id="mc-survival" style="color:var(--green)">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">portföy tükenmeden tamamlandı</div>
+        <div class="mc-survival-bar"><div class="mc-survival-fill" id="mc-survival-bar" style="width:0%;background:var(--green)"></div></div>
+      </div>
+      <div class="mc-result-card">
+        <div class="mc-result-label">Medyan Son Bakiye (%50)</div>
+        <div class="mc-result-val" id="mc-p50" style="color:var(--cyan)">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">senaryoların yarısı bu değerin üstünde</div>
+      </div>
+      <div class="mc-result-card">
+        <div class="mc-result-label">İyimser Bant (%90)</div>
+        <div class="mc-result-val" id="mc-p90" style="color:var(--green)">—</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:4px">en iyi %10 senaryonun eşiği</div>
+      </div>
+    </div>
+
+    <!-- MC Chart -->
+    <div class="chart-section" id="mc-chart-section" style="display:none">
+      <div class="chart-hdr-row">
+        <div class="chart-hdr"><div class="chart-indicator"></div><span class="chart-title-text">Monte Carlo — Olasılık Bantları</span></div>
+        <div style="font-size:10px;color:var(--muted)" id="mc-iter-label"></div>
+      </div>
+      <div class="chart-wrap"><canvas id="mcChart"></canvas></div>
+    </div>
+
+    <!-- Percentile Table -->
+    <div class="chart-section" id="mc-table-section" style="display:none">
+      <div class="chart-hdr-row">
+        <div class="chart-hdr"><div class="chart-indicator" style="background:var(--teal)"></div><span class="chart-title-text">Yıl Bazlı Persentil Tablosu</span></div>
+      </div>
+      <div style="overflow-x:auto">
+        <table class="mc-percentile-table">
+          <thead><tr>
+            <th>Yıl</th>
+            <th style="color:var(--red)">%10 Kötümser</th>
+            <th style="color:var(--orange)">%25</th>
+            <th style="color:var(--cyan)">%50 Medyan</th>
+            <th style="color:var(--teal)">%75</th>
+            <th style="color:var(--green)">%90 İyimser</th>
+          </tr></thead>
+          <tbody id="mc-ptable-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <button class="btn btn-cyan" style="width:100%" onclick="runMC()">▶ Simülasyonu Çalıştır</button>
+  </div>
+
+  <!-- TAB: Karşılaştır -->
+  <div id="tab-compare" class="tab-content">
+    <input type="text" id="sc-name" class="cf-input" value="Senaryo 1" placeholder="Senaryo adı...">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <div class="input-hdr"><span>Süre</span><span id="lbl-sc-years" style="color:var(--cyan);font-size:15px;font-family:monospace;font-weight:700">15 Yıl</span></div>
+        <input type="range" id="slip-sc-years" class="custom-slider" min="1" max="30" value="15" oninput="document.getElementById('lbl-sc-years').innerText=this.value+' Yıl'">
+      </div>
+      <div>
+        <div class="input-hdr"><span>Getiri</span><span id="lbl-sc-rate" style="color:var(--green);font-size:15px;font-family:monospace;font-weight:700">%22</span></div>
+        <input type="range" id="slip-sc-rate" class="custom-slider slider-green" min="-20" max="150" value="22" step="0.5" oninput="document.getElementById('lbl-sc-rate').innerText='%'+this.value">
+      </div>
+    </div>
+    <button class="btn btn-cyan" onclick="addScenario()">+ Senaryo Ekle (maks 5)</button>
+    <div id="sc-list"></div>
+  </div>
+
+  <!-- METRİK KARTLARI -->
+  <div class="cards-grid" id="cards-grid" style="display:none"></div>
+
+  <!-- ANA GRAFİK -->
+  <div class="chart-section" id="main-chart-section" style="display:none">
+    <div class="chart-hdr-row">
+      <div class="chart-hdr"><div class="chart-indicator"></div><span class="chart-title-text" id="chart-title">Portföy Büyüme Trendi</span></div>
+      <div class="chart-sub-tabs">
+        <button class="c-tab active" id="ctab-growth" onclick="switchChartTab('growth',this)">Trend</button>
+        <button class="c-tab" id="ctab-annual" onclick="switchChartTab('annual',this)">Yıllık Getiri</button>
+        <button class="c-tab" id="ctab-drawdown" onclick="switchChartTab('drawdown',this)">Drawdown</button>
+        <button class="c-tab" id="ctab-composition" onclick="switchChartTab('composition',this)">Bileşim</button>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="mainChart"></canvas></div>
+  </div>
+
+  <!-- COMPARE GRAFİK -->
+  <div class="chart-section" id="compare-chart-section" style="display:none">
+    <div class="chart-hdr-row">
+      <div class="chart-hdr"><div class="chart-indicator" style="background:var(--orange)"></div><span class="chart-title-text">Senaryo Karşılaştırması</span></div>
+    </div>
+    <div class="chart-wrap"><canvas id="compareChart"></canvas></div>
+  </div>
+
+  <!-- YIL BAZLI TABLO -->
+  <div class="table-section" id="table-section" style="display:none">
+    <div style="display:flex;align-items:center;gap:7px;margin-bottom:12px">
+      <div class="chart-indicator"></div>
+      <span style="font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:700">Yıl Bazlı Detaylı Analiz (Nominal + Reel)</span>
+    </div>
+    <table id="main-table">
+      <thead>
+        <tr>
+          <th>Yıl</th>
+          <th>Getiri%</th>
+          <th>Kümülatif Getiri</th>
+          <th>Kümülatif Çekim</th>
+          <th>Nakit Akışı</th>
+          <th>Nominal Bakiye</th>
+          <th>Reel Bakiye</th>
+          <th>Drawdown%</th>
+        </tr>
+      </thead>
+      <tbody id="main-tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- GELİŞTİRME ÖNERİLERİ -->
+  <div class="suggestions-section">
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="width:3px;height:12px;background:var(--gold);border-radius:2px;display:inline-block"></span>
+      <span style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.12em;font-weight:700">Gelecek Sürüm — Simülasyon &amp; Görselleştirme Önerileri</span>
+    </div>
+    <div class="sug-grid">
+      <div class="sug-card">
+        <div class="sug-title"><span class="sug-icon">📈</span>Portföy Çeşitlendirme Simülatörü<span class="sug-badge">YÜK SEKI</span></div>
+        <div class="sug-desc">Birden fazla varlık sınıfı (hisse, tahvil, altın, döviz) için ayrı getiri/volatilite girişi ve korelasyon matrisi. Her varlığın ağırlığı kaydırılarak optimal dağılım aranır. Efficient frontier eğrisi çizilir.</div>
+        <div class="sug-why">Gerekçe: Tek varlık simülasyonu gerçek portföy kararlarını karşılamaz. Çeşitlendirme etkisini (korelasyon sayesinde riski düşürme) görselleştirmek kullanıcı için en yüksek değerli özellik.</div>
+      </div>
+      <div class="sug-card">
+        <div class="sug-title"><span class="sug-icon">🌡️</span>Güvenli Çekim Oranı (SWR) Haritası<span class="sug-badge">ÖNCEL</span></div>
+        <div class="sug-desc">Klasik "%4 kuralı"nın ötesine geçerek farklı çekim oranlarını (%2 ila %8) ve süreleri (10–30 yıl) bir ısı haritasında gösterir. Her hücre, o kombinasyonun hayatta kalma olasılığını renkle kodlar.</div>
+        <div class="sug-why">Gerekçe: "Aylık ne kadar çekebilirim?" sorusunun en sezgisel cevabı. Portföy tükenmesi riskini somutlaştırır. Erken emeklilik planlayıcıları için olmazsa olmaz.</div>
+      </div>
+      <div class="sug-card">
+        <div class="sug-title"><span class="sug-icon">📉</span>Tarihsel Stres Testi<span class="sug-badge">GÜVENİLİRLİK</span></div>
+        <div class="sug-desc">2008 finans krizi, 2020 Covid çöküşü, 1929 Büyük Buhranı gibi gerçek tarihsel kriz getiri dizilerini portföye uygulayarak sonucu gösterir. "En kötü 5 yılın" direnci test edilir.</div>
+        <div class="sug-why">Gerekçe: Monte Carlo rastgele senaryolar üretir ama "gerçekten böyle olsaydı ne olurdu?" sorusu tarihsel verilerle çok daha ikna edicidir. Kriz dönemlerinde seri korelasyon göz ardı edilemez.</div>
+      </div>
+      <div class="sug-card">
+        <div class="sug-title"><span class="sug-icon">🔄</span>Yeniden Dengeleme Simülatörü<span class="sug-badge">GELİŞMİŞ</span></div>
+        <div class="sug-desc">Yıllık/dönemsel yeniden dengeleme stratejilerinin (sabit ağırlık, eşik bazlı, dinamik) portföy performansına ve volatilitesine etkisini simüle eder. İşlem maliyetleri dahil edilebilir.</div>
+        <div class="sug-why">Gerekçe: Yeniden dengeleme hem riski kontrol eder hem de uzun vadede "kaybedenden al, kazanandan sat" disiplinini zorunlu kılar. Etkisi şaşırtıcı biçimde büyük olabilir.</div>
+      </div>
+      <div class="sug-card">
+        <div class="sug-title"><span class="sug-icon">💧</span>Likidite Zaman Çizelgesi<span class="sug-badge">PLANLAMACI</span></div>
+        <div class="sug-desc">Büyük harcama gereksinimlerini (ev alımı, eğitim, tıbbi masraf) yıl bazlı girdi olarak ekleyip nakit akışını ve portföy yolunu görselleştirir. Her önemli olay grafik üzerinde işaretlenir.</div>
+        <div class="sug-why">Gerekçe: Nakit akışı modülü var ama zamanlama bazlı büyük harcama planlaması ayrı bir görselleştirmeyi hak ediyor. Finansal planlama aracı olarak çok güçlü bir fark yaratır.</div>
+      </div>
+      <div class="sug-card">
+        <div class="sug-title"><span class="sug-icon">📊</span>Rolling Returns Grafiği<span class="sug-badge">ANALİTİK</span></div>
+        <div class="sug-desc">Herhangi 3, 5 veya 10 yıllık dönemin CAGR'ını gösteren kayan pencere grafiği. "Hangi 5 yılda ne kazandım?" sorusuna cevap verir ve dip giriş / zirve giriş dönemlerini görselleştirir.</div>
+        <div class="sug-why">Gerekçe: Yıl bazlı getiri tablosu anlık performansı gösterir; ancak yatırımcılar belirli dönemlerde ne kazandıklarını merak eder. Özellikle Yıl Yıl modunda son derece anlamlı.</div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<!-- ── PDF MODAL ─────────────────────────────────────────────────────── -->
+<div id="pdf-overlay">
+  <div id="pdf-box">
+    <div class="pdf-toolbar">
+      <div>
+        <div style="font-size:17px;font-weight:800;color:#0f172a">📊 Portföy Analiz Raporu</div>
+        <div style="font-size:11px;color:#64748b;margin-top:2px" id="pdf-subtitle"></div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="pdf-print-btn" onclick="window.print()">🖨 Yazdır / PDF Kaydet</button>
+        <button class="pdf-close-btn" onclick="closePDF()">Kapat</button>
+      </div>
+    </div>
+    <div class="pdf-body">
+      <!-- Yönetici Özeti -->
+      <div style="background:linear-gradient(135deg,#0f172a,#1e293b);border-radius:14px;padding:18px 22px;margin-bottom:20px;color:#fff">
+        <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#94a3b8;margin-bottom:12px">YÖNETİCİ ÖZETİ</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 32px;font-size:13px" id="pdf-exec-grid"></div>
+      </div>
+      <div class="pdf-section-title">1. Parametreler</div>
+      <div class="pdf-grid4" id="pdf-params"></div>
+      <div class="pdf-section-title" style="margin-top:16px">2. Finansal Metrikler</div>
+      <div class="pdf-grid4" id="pdf-metrics-a"></div>
+      <div class="pdf-grid4" id="pdf-metrics-b" style="margin-top:8px"></div>
+      <div class="pdf-section-title" style="margin-top:16px" id="pdf-cf-title" style="display:none">3. Nakit Akışı Kronolojisi</div>
+      <table id="pdf-cf-table" style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:4px;display:none">
+        <thead><tr style="background:#f1f5f9"><th style="padding:6px 9px;text-align:left;font-size:9px;text-transform:uppercase;color:#64748b">Yıl</th><th style="padding:6px 9px;text-align:left;font-size:9px;text-transform:uppercase;color:#64748b">Tutar</th><th style="padding:6px 9px;text-align:left;font-size:9px;text-transform:uppercase;color:#64748b">Not</th></tr></thead>
+        <tbody id="pdf-cf-body"></tbody>
+      </table>
+      <div class="pdf-section-title" style="margin-top:16px" id="pdf-table-title">4. Yıl Bazlı Performans Tablosu</div>
+      <table id="pdf-table">
+        <thead><tr>
+          <th>Yıl</th><th>Getiri%</th><th>Kümülatif Getiri</th><th>Kümülatif Çekim</th><th>Nakit Akışı</th><th>Nominal Bakiye</th><th>Reel Bakiye</th><th>DD%</th>
+        </tr></thead>
+        <tbody id="pdf-tbody"></tbody>
+      </table>
+      <div style="margin-top:22px;padding-top:12px;border-top:1px solid #e2e8f0;display:flex;justify-content:space-between;font-size:10px;color:#94a3b8">
+        <span>Portföy Analiz Merkezi</span>
+        <span>Bu rapor bilgilendirme amaçlıdır; yatırım tavsiyesi değildir.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════ -->
+<script>
+// ── GLOBAL STATE ──────────────────────────────────────────────────────────
+let currentTab      = 'proj';
+let currentChartTab = 'growth';
+let cashflows       = [];
+let customYears     = Array.from({length:10},(_,i)=>({id:i+1,year:i+1,rate:22}));
+let compareScenarios= [];
+let mainChart       = null;
+let compareChart    = null;
+let mcChart         = null;
+let latestData      = [];
+let latestMetrics   = null;
+let latestMC        = null;
+
+// ── FORMATTERS ────────────────────────────────────────────────────────────
+function fmt(v){
+  if(v===null||v===undefined||isNaN(v)||!isFinite(v))return"—";
+  const a=Math.abs(v);
+  if(a>=1e6)return`$${(v/1e6).toFixed(2)}M`;
+  if(a>=1e3)return`$${(v/1e3).toFixed(1)}K`;
+  return`$${Math.round(v).toLocaleString('tr-TR')}`;
+}
+function fmtPct(v,d=2){
+  if(v===null||v===undefined||isNaN(v)||!isFinite(v))return"—";
+  return`${v>0?"+":""}${v.toFixed(d)}%`;
+}
+
+// ── SIMULATION ────────────────────────────────────────────────────────────
+function simulate(years,rate,initial,annualW,cfs=[],inf=0){
+  const data=[{year:0,balance:initial,realBalance:initial,r:0,interest:0,withdrawal:0,cashflow:0,dd:0,cumInt:0,cumW:0,peak:initial}];
+  let bal=initial,peak=initial,cumInt=0,cumW=0;
+  for(let y=1;y<=years;y++){
+    if(bal<=0){data.push({year:y,balance:0,realBalance:0,r:Array.isArray(rate)?rate[y-1]??rate[rate.length-1]:rate,interest:0,withdrawal:annualW,cashflow:0,dd:-100,cumInt,cumW,peak});continue;}
+    const r=Array.isArray(rate)?(rate[y-1]??rate[rate.length-1]):rate;
+    const cf=cfs.filter(c=>c.year===y).reduce((s,c)=>s+c.amount,0);
+    const interest=bal*(r/100);
+    bal=bal+interest-annualW+cf;
+    if(bal<0)bal=0;
+    if(bal>peak)peak=bal;
+    const dd=peak>0?((bal-peak)/peak)*100:0;
+    const realBal=bal/Math.pow(1+(inf/100),y);
+    cumInt+=Math.max(0,interest);
+    cumW+=annualW;
+    data.push({year:y,balance:Math.round(bal),realBalance:Math.round(realBal),r,interest:Math.round(interest),withdrawal:annualW,cashflow:cf,dd,cumInt:Math.round(cumInt),cumW:Math.round(cumW),peak:Math.round(peak)});
+  }
+  return data;
+}
+
+function findReturn(years,target,initial,annualW,cfs=[]){
+  let lo=-50,hi=500;
+  for(let i=0;i<100;i++){const mid=(lo+hi)/2;const d=simulate(years,mid,initial,annualW,cfs);if(d[d.length-1].balance<target)lo=mid;else hi=mid;}
+  return(lo+hi)/2;
+}
+
+function calcXIRR(flows){
+  if(!flows||flows.length<2)return null;
+  if(!flows.some(f=>f.amount>0)||!flows.some(f=>f.amount<0))return null;
+  const npv=r=>flows.reduce((s,f)=>s+f.amount/Math.pow(1+r,f.t),0);
+  const dnpv=r=>flows.reduce((s,f)=>s-f.t*f.amount/Math.pow(1+r,f.t+1),0);
+  for(const s0 of[0.1,0.3,-0.1,0.5,0.01]){
+    let r=s0;
+    for(let i=0;i<200;i++){
+      const d=dnpv(r);if(!isFinite(d)||Math.abs(d)<1e-14)break;
+      const step=npv(r)/d;r-=step;
+      r=Math.max(-0.999,Math.min(50,r));
+      if(Math.abs(step)<1e-10){const res=r*100;if(isFinite(res)&&res>-99&&res<5000)return res;break;}
+    }
+  }
+  return null;
+}
+
+function calcMetrics(data,initial,annualW,cfs=[]){
+  if(!data||data.length<2)return null;
+  const last=data[data.length-1];
+  const years=last.year||1;
+  const finalBal=last.balance,finalReal=last.realBalance;
+  let ruinYear=null,breakEvenYear=null;
+  for(const d of data){
+    if(d.year>0&&d.balance<=0&&ruinYear===null)ruinYear=d.year;
+    if(d.year>0&&d.cumInt>d.cumW&&breakEvenYear===null)breakEvenYear=d.year;
+  }
+  const ruined=ruinYear!==null;
+  const activeYrs=ruinYear??years;
+  const rVals=data.slice(1,activeYrs+1).map(d=>typeof d.r==="number"?d.r:0);
+  const cagr=(!ruined&&initial>0&&finalBal>0)?(Math.pow(finalBal/initial,1/years)-1)*100:null;
+  const twrr=rVals.length?(Math.pow(rVals.reduce((p,r)=>p*(1+r/100),1),1/rVals.length)-1)*100:null;
+  const xirrFlows=[{t:0,amount:-initial}];
+  for(let y=1;y<=activeYrs;y++){
+    const cf=cfs.filter(c=>c.year===y).reduce((s,c)=>s+c.amount,0);
+    xirrFlows.push({t:y,amount:y===activeYrs?(-annualW+cf)+(ruined?0:finalBal):(-annualW+cf)});
+  }
+  const xirrVal=calcXIRR(xirrFlows);
+  let maxDD=0;for(const d of data){if(d.dd<maxDD)maxDD=d.dd;}
+  const mean=rVals.length?rVals.reduce((s,r)=>s+r,0)/rVals.length:0;
+  const variance=rVals.length?rVals.reduce((s,r)=>s+(r-mean)**2,0)/rVals.length:0;
+  const vol=Math.sqrt(variance);
+  const rf=3;
+  const sharpe=vol>0.5?(mean-rf)/vol:null;
+  const downR=rVals.map(r=>r-rf).filter(r=>r<0);
+  const downVar=downR.length?downR.reduce((s,r)=>s+r*r,0)/rVals.length:0;
+  const sortino=downVar>0?(mean-rf)/Math.sqrt(downVar):null;
+  const calmar=(cagr!==null&&maxDD<0)?cagr/Math.abs(maxDD):null;
+  const totalWithdrawn=annualW*(ruinYear??years)+cfs.filter(c=>c.amount<0).reduce((s,c)=>s+Math.abs(c.amount),0);
+  const totalGain=finalBal-initial;
+  const totalReturn=initial>0?(totalGain/initial)*100:null;
+  return{cagr,twrr,xirrVal,maxDD,vol,sharpe,sortino,calmar,totalGain,totalReturn,totalWithdrawn,ruined,ruinYear,breakEvenYear,finalBal,finalReal,years:activeYrs,annualW,mean,cumInt:last.cumInt,cumW:last.cumW};
+}
+
+// ── MONTE CARLO ────────────────────────────────────────────────────────────
+function randNormal(mu,sigma){
+  let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();
+  return mu+sigma*Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+function runMC(){
+  const capital=parseFloat(document.getElementById('inp-capital').value)||0;
+  const monthly=parseFloat(document.getElementById('inp-monthly').value)||0;
+  const annualW=monthly*12;
+  const years=parseInt(document.getElementById('slip-years').value)||15;
+  const meanReturn=parseFloat(document.getElementById('slip-rate').value)||20;
+  const vol=parseInt(document.getElementById('mc-vol-slider').value)||20;
+  const iter=parseInt(document.getElementById('mc-iter-slider').value)||500;
+
+  const paths=[];
+  let ruinCount=0;
+  for(let i=0;i<iter;i++){
+    let bal=capital;const path=[bal];let ruined=false;
+    for(let y=1;y<=years;y++){
+      const r=randNormal(meanReturn,vol);
+      const cf=cashflows.filter(c=>c.year===y).reduce((s,c)=>s+c.amount,0);
+      bal=bal*(1+r/100)-annualW+cf;
+      if(bal<0){bal=0;ruined=true;}
+      path.push(Math.round(bal));
+    }
+    if(ruined)ruinCount++;
+    paths.push(path);
+  }
+
+  // Percentiles
+  const pctData=[];
+  for(let y=0;y<=years;y++){
+    const vals=paths.map(p=>p[y]).sort((a,b)=>a-b);
+    pctData.push({year:y,p10:vals[Math.floor(iter*0.1)],p25:vals[Math.floor(iter*0.25)],p50:vals[Math.floor(iter*0.5)],p75:vals[Math.floor(iter*0.75)],p90:vals[Math.floor(iter*0.9)]});
+  }
+  const survivalRate=((iter-ruinCount)/iter)*100;
+  latestMC={pctData,survivalRate,ruinCount,iter,years,capital,meanReturn,vol};
+
+  // Update results
+  document.getElementById('mc-results-grid').style.display='grid';
+  document.getElementById('mc-chart-section').style.display='block';
+  document.getElementById('mc-table-section').style.display='block';
+  document.getElementById('mc-iter-label').innerText=`${iter} senaryo`;
+
+  const sColor=survivalRate>75?'var(--green)':survivalRate>50?'var(--gold)':'var(--red)';
+  document.getElementById('mc-survival').innerText=`%${survivalRate.toFixed(1)}`;
+  document.getElementById('mc-survival').style.color=sColor;
+  document.getElementById('mc-survival-bar').style.width=`${survivalRate}%`;
+  document.getElementById('mc-survival-bar').style.background=sColor;
+  const finalPct=pctData[pctData.length-1];
+  document.getElementById('mc-p50').innerText=fmt(finalPct.p50);
+  document.getElementById('mc-p90').innerText=fmt(finalPct.p90);
+
+  // Chart
+  if(mcChart)mcChart.destroy();
+  const ctx=document.getElementById('mcChart').getContext('2d');
+  const labels=pctData.map(d=>`Y${d.year}`);
+  mcChart=new Chart(ctx,{
+    type:'line',
+    data:{labels,datasets:[
+      {label:'%90 İyimser',data:pctData.map(d=>d.p90),borderColor:'#34d399',borderDash:[6,3],borderWidth:2,fill:false,tension:.3,pointRadius:0},
+      {label:'%75',data:pctData.map(d=>d.p75),borderColor:'#2dd4bf',borderDash:[3,3],borderWidth:1.5,fill:false,tension:.3,pointRadius:0},
+      {label:'%50 Medyan',data:pctData.map(d=>d.p50),borderColor:'#38bdf8',borderWidth:3,fill:false,tension:.3,pointRadius:0},
+      {label:'%25',data:pctData.map(d=>d.p25),borderColor:'#fb923c',borderDash:[3,3],borderWidth:1.5,fill:false,tension:.3,pointRadius:0},
+      {label:'%10 Kötümser',data:pctData.map(d=>d.p10),borderColor:'#f87171',borderDash:[6,3],borderWidth:2,fill:false,tension:.3,pointRadius:0},
+    ]},
+    options:{
+      responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{labels:{color:'#ccd8e8',font:{size:11}}},tooltip:{backgroundColor:'#090e17',borderColor:'#1c2e42',borderWidth:1,titleColor:'#4d6278',bodyColor:'#ccd8e8',callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmt(ctx.raw)}`}}},
+      scales:{
+        x:{grid:{color:'#132030'},ticks:{color:'#4d6278',font:{size:10}}},
+        y:{grid:{color:'#132030'},ticks:{color:'#4d6278',font:{size:10},callback:v=>fmt(v)}}
+      }
+    }
+  });
+
+  // Percentile table
+  const tbody=document.getElementById('mc-ptable-body');
+  tbody.innerHTML='';
+  pctData.filter(d=>d.year>0&&d.year%Math.max(1,Math.floor(years/10))===0||d.year===years).forEach(d=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:var(--muted);font-weight:600">Yıl ${d.year}</td>
+      <td style="color:var(--red)">${fmt(d.p10)}</td>
+      <td style="color:var(--orange)">${fmt(d.p25)}</td>
+      <td style="color:var(--cyan);font-weight:700">${fmt(d.p50)}</td>
+      <td style="color:var(--teal)">${fmt(d.p75)}</td>
+      <td style="color:var(--green)">${fmt(d.p90)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function onMCChange(){
+  document.getElementById('mc-vol-badge').innerText=`%${document.getElementById('mc-vol-slider').value}`;
+  document.getElementById('mc-iter-badge').innerText=document.getElementById('mc-iter-slider').value;
+}
+
+// ── MAIN CALCULATE ─────────────────────────────────────────────────────────
+function calculate(){
+  const capital=parseFloat(document.getElementById('inp-capital').value)||0;
+  const monthly=parseFloat(document.getElementById('inp-monthly').value)||0;
+  const inf=parseFloat(document.getElementById('inp-inf').value)||0;
+  const annualW=monthly*12;
+
+  // Update labels
+  document.getElementById('lbl-capital').innerText=fmt(capital);
+  document.getElementById('lbl-monthly').innerText=`${fmt(monthly)}/ay`;
+  document.getElementById('lbl-inf').innerText=`%${inf}`;
+
+  // Update MC mean display
+  document.getElementById('mc-mean-display').innerText=`%${document.getElementById('slip-rate').value}`;
+  document.getElementById('mc-years-display').innerText=`${document.getElementById('slip-years').value} yıl`;
+
+  if(currentTab==='mc'){renderMCTab();return;}
+  if(currentTab==='compare'){renderCompareChart(capital,annualW,inf);return;}
+
+  let data,modeStr;
+  if(currentTab==='proj'){
+    const y=parseInt(document.getElementById('slip-years').value)||15;
+    const r=parseFloat(document.getElementById('slip-rate').value)||0;
+    data=simulate(y,r,capital,annualW,cashflows,inf);
+    modeStr=`Projeksiyon · ${y}y · %${r}`;
+  } else if(currentTab==='find'){
+    const y=parseInt(document.getElementById('slip-fyears').value)||10;
+    const tgt=parseFloat(document.getElementById('inp-ftarget').value)||0;
+    const rr=findReturn(y,tgt,capital,annualW,cashflows);
+    document.getElementById('find-lbl').innerText=`${y} yılda ${fmt(tgt)} için`;
+    document.getElementById('find-result').innerText=`%${rr.toFixed(2)}`;
+    data=simulate(y,rr,capital,annualW,cashflows,inf);
+    modeStr=`Getiri Bul · ${y}y · ${fmt(tgt)}`;
+  } else if(currentTab==='custom'){
+    const sorted=[...customYears].sort((a,b)=>a.year-b.year);
+    const rates=sorted.map(r=>r.rate);
+    data=simulate(sorted.length,rates,capital,annualW,cashflows,inf);
+    modeStr=`Yıl Yıl · ${sorted.length} yıl`;
+  }
+
+  if(!data)return;
+  latestData=data;
+  const m=calcMetrics(data,capital,annualW,cashflows);
+  latestMetrics=m;
+
+  renderKPI(m);
+  renderCards(m);
+  renderChart(data,capital);
+  renderTable(data,capital);
+
+  document.getElementById('kpi-strip').style.display='grid';
+  document.getElementById('cards-grid').style.display='grid';
+  document.getElementById('main-chart-section').style.display='block';
+  document.getElementById('table-section').style.display='block';
+  document.getElementById('compare-chart-section').style.display='none';
+}
+
+// ── KPI STRIP ──────────────────────────────────────────────────────────────
+function renderKPI(m){
+  const set=(id,v,c)=>{const el=document.getElementById(id);el.innerText=v;if(c)el.style.color=c;};
+  set('kpi-balance',m.finalBal<=0?'TÜKENDİ':fmt(m.finalBal),m.finalBal<=0?'var(--red)':'var(--cyan)');
+  set('kpi-real',m.finalReal>0?fmt(m.finalReal):'—','var(--teal)');
+  set('kpi-cagr',`${fmtPct(m.cagr)} / ${fmtPct(m.xirrVal)}`,(m.cagr??0)>0?'var(--green)':'var(--red)');
+  set('kpi-gain',fmt(m.totalGain),m.totalGain>0?'var(--green)':'var(--red)');
+  set('kpi-risk',`-${m.maxDD.toFixed(1)}% / ${m.vol.toFixed(1)}%`,'var(--red)');
+  set('kpi-be',m.breakEvenYear?`Yıl ${m.breakEvenYear}`:'Yok','var(--gold)');
+  set('kpi-ratios',`${m.sharpe!=null?m.sharpe.toFixed(1):'—'} / ${m.sortino!=null?m.sortino.toFixed(1):'—'}`);
+  const surv=document.getElementById('kpi-survive');
+  surv.innerText=m.ruined?`Yıl ${m.ruinYear} tükendi`:'✓ Sürdürülebilir';
+  surv.style.color=m.ruined?'var(--red)':'var(--green)';
+}
+
+// ── METRIC CARDS ───────────────────────────────────────────────────────────
+function renderCards(m){
+  const w=document.getElementById('cards-grid');
+  const card=(label,val,sub,c)=>`<div class="m-card"><div class="m-card-label">${label}</div><div class="m-card-val" style="color:${c}">${val}</div><div class="m-card-sub">${sub}</div></div>`;
+  w.innerHTML=
+    card('CAGR / TWRR',`${fmtPct(m.cagr)} / <span style="color:var(--teal)">${fmtPct(m.twrr)}</span>`,'Bileşik büyüme ve saf getiri',(m.cagr??0)>0?'var(--green)':'var(--red)')+
+    card('XIRR + Break-Even',`${fmtPct(m.xirrVal)} <span style="font-size:12px;color:var(--muted)">(BE:${m.breakEvenYear?'Y'+m.breakEvenYear:'Yok'})</span>`,'Gerçek verim ve kırılma yılı',(m.xirrVal??0)>0?'var(--green)':'var(--red)')+
+    card('Risk: MaxDD / Vol',`-${m.maxDD.toFixed(1)}% / <span style="color:var(--gold)">${m.vol.toFixed(1)}%</span>`,'Zirveden düşüş &amp; dalgalanma','var(--red)')+
+    card('Sharpe / Sortino / Calmar',`${m.sharpe!=null?m.sharpe.toFixed(1):'—'} / ${m.sortino!=null?m.sortino.toFixed(1):'—'} / ${m.calmar!=null?m.calmar.toFixed(1):'—'}`,'Performans doğrulama katsayıları','var(--cyan)');
+}
+
+// ── MAIN CHART ──────────────────────────────────────────────────────────────
+const CHART_COLORS={
+  growth:{border:'#38bdf8',bg:'rgba(56,189,248,.07)'},
+  real:{border:'#2dd4bf',bg:'rgba(45,212,191,.04)'},
+  annual_pos:'#34d399', annual_neg:'#f87171',
+  drawdown:'#f87171', drawdown_fill:'rgba(248,113,113,.15)',
+  comp:['#38bdf8','#34d399','#f87171']
+};
+
+function renderChart(data,capital){
+  if(mainChart)mainChart.destroy();
+  const ctx=document.getElementById('mainChart').getContext('2d');
+  const labels=data.map(d=>`Y${d.year}`);
+  const commonOpts={
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#ccd8e8',font:{size:11}}},tooltip:{backgroundColor:'#090e17',borderColor:'#1c2e42',borderWidth:1,titleColor:'#4d6278',bodyColor:'#ccd8e8'}},
+    scales:{
+      x:{grid:{color:'#132030'},ticks:{color:'#4d6278',font:{size:10}}},
+      y:{grid:{color:'#132030'},ticks:{color:'#4d6278',font:{size:10},callback:v=>fmt(v)}}
+    }
+  };
+
+  if(currentChartTab==='growth'){
+    document.getElementById('chart-title').innerText='Portföy Büyüme Trendi (Nominal + Reel)';
+    mainChart=new Chart(ctx,{type:'line',data:{labels,datasets:[
+      {label:'Reel Bakiye',data:data.map(d=>d.realBalance),borderColor:'#2dd4bf',borderDash:[5,3],borderWidth:2,fill:false,tension:.3,pointRadius:0},
+      {label:'Nominal Bakiye',data:data.map(d=>d.balance),borderColor:'#38bdf8',backgroundColor:'rgba(56,189,248,.07)',borderWidth:2.5,fill:true,tension:.3,pointRadius:0}
+    ]},options:commonOpts});
+  }
+  else if(currentChartTab==='annual'){
+    document.getElementById('chart-title').innerText='Yıllık Getiri Dağılımı';
+    mainChart=new Chart(ctx,{type:'bar',data:{labels:labels.slice(1),datasets:[{
+      label:'Yıllık Getiri %',
+      data:data.slice(1).map(d=>d.r),
+      backgroundColor:data.slice(1).map(d=>d.r>=0?'rgba(52,211,153,.65)':'rgba(248,113,113,.65)'),
+      borderColor:data.slice(1).map(d=>d.r>=0?'#34d399':'#f87171'),
+      borderWidth:1
+    }]},options:{...commonOpts,scales:{x:{grid:{color:'#132030'},ticks:{color:'#4d6278',font:{size:10}}},y:{grid:{color:'#132030'},ticks:{color:'#4d6278',font:{size:10},callback:v=>v+'%'},title:{display:true,text:'%',color:'#4d6278'}}}}});
+  }
+  else if(currentChartTab==='drawdown'){
+    document.getElementById('chart-title').innerText='Sualtı Analizi (Drawdown Derinliği)';
+    mainChart=new Chart(ctx,{type:'line',data:{labels,datasets:[{
+      label:'Drawdown %',
+      data:data.map(d=>d.dd),
+      borderColor:'#f87171',backgroundColor:'rgba(248,113,113,.12)',
+      borderWidth:2,fill:true,tension:.3,pointRadius:0
+    }]},options:{...commonOpts,scales:{x:{grid:{color:'#132030'},ticks:{color:'#4d6278',font:{size:10}}},y:{min:-100,max:0,grid:{color:'#132030'},ticks:{color:'#f87171',font:{size:10},callback:v=>v+'%'}}}}});
+  }
+  else if(currentChartTab==='composition'){
+    document.getElementById('chart-title').innerText='Sermaye Bileşimi (Son Yıl)';
+    const last=data[data.length-1];
+    // Only render if data is valid
+    if(last.cumInt<=0&&capital<=0){
+      document.getElementById('chart-title').innerText='Sermaye Bileşimi — Veri Yetersiz';
+      return;
+    }
+    mainChart=new Chart(ctx,{type:'doughnut',data:{
+      labels:['Başlangıç Sermayesi','Üretilen Kümülatif Kazanç'],
+      datasets:[{data:[capital,Math.max(0,last.cumInt)],backgroundColor:['rgba(56,189,248,.7)','rgba(52,211,153,.7)'],borderColor:['#38bdf8','#34d399'],borderWidth:2,hoverOffset:6}]
+    },options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:'#ccd8e8',font:{size:12}},position:'right'},tooltip:{backgroundColor:'#090e17',borderColor:'#1c2e42',borderWidth:1,callbacks:{label:ctx=>`${ctx.label}: ${fmt(ctx.raw)}`}}}}});
+  }
+}
+
+// ── TABLE ──────────────────────────────────────────────────────────────────
+function renderTable(data,capital){
+  const tbody=document.getElementById('main-tbody');
+  tbody.innerHTML='';
+  data.slice(1).forEach(row=>{
+    const isNeg=row.balance<=0,isPos=row.balance>capital;
+    const hasCF=row.cashflow!==0;
+    const barW=Math.min(Math.abs(row.r||0),100);
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td style="color:var(--muted);font-weight:600">Yıl ${row.year}</td>
+      <td>
+        <span style="color:${row.r>=0?'var(--green)':'var(--red)'}">%${(row.r||0).toFixed(1)}</span>
+        <span class="bar-mini"><span class="bar-mini-fill" style="width:${barW}%;background:${row.r>=0?'var(--green)':'var(--red)'}"></span></span>
+      </td>
+      <td style="color:rgba(52,211,153,.8)">+${fmt(row.cumInt)}</td>
+      <td style="color:rgba(248,113,113,.7)">-${fmt(row.cumW)}</td>
+      <td style="color:${hasCF?(row.cashflow>0?'var(--green)':'var(--red)'):'var(--dim)'}; font-weight:${hasCF?700:400}">
+        ${hasCF?(row.cashflow>0?'+':'')+fmt(row.cashflow)+'<span style="font-size:9px;color:var(--muted);margin-left:3px">'+(row.cashflow>0?'▲giriş':'▼çekim')+'</span>':'—'}
+      </td>
+      <td style="font-weight:700;color:${isNeg?'var(--red)':isPos?'var(--text)':'var(--muted)'}">
+        ${isNeg?'TÜKENDİ':fmt(row.balance)}
+      </td>
+      <td style="font-weight:600;color:${isNeg?'var(--red)':'var(--teal)'}">
+        ${isNeg?'TÜKENDİ':fmt(row.realBalance)}
+      </td>
+      <td style="color:${row.dd<-5?'var(--red)':'var(--dim)'}">
+        ${row.dd<0?row.dd.toFixed(1)+'%':'—'}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ── COMPARE ────────────────────────────────────────────────────────────────
+const SC_COLORS=['#38bdf8','#fb923c','#34d399','#f59e0b','#2dd4bf'];
+
+function renderCompareChart(capital,annualW,inf){
+  document.getElementById('cards-grid').style.display='none';
+  document.getElementById('main-chart-section').style.display='none';
+  document.getElementById('table-section').style.display='none';
+  document.getElementById('compare-chart-section').style.display=compareScenarios.length?'block':'none';
+  if(!compareScenarios.length){if(compareChart){compareChart.destroy();compareChart=null;}return;}
+
+  if(compareChart)compareChart.destroy();
+  const maxY=Math.max(...compareScenarios.map(s=>s.years));
+  const labels=Array.from({length:maxY+1},(_,i)=>`Y${i}`);
+  const datasets=compareScenarios.map((sc,i)=>{
+    const d=simulate(sc.years,sc.rate,capital,annualW,cashflows,inf);
+    const pts=Array.from({length:maxY+1},(_,y)=>y<d.length?d[y].balance:null);
+    return{label:sc.label,data:pts,borderColor:SC_COLORS[i%5],borderWidth:2.5,fill:false,tension:.3,pointRadius:0};
+  });
+  const ctx=document.getElementById('compareChart').getContext('2d');
+  compareChart=new Chart(ctx,{type:'line',data:{labels,datasets},options:{
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{labels:{color:'#ccd8e8',font:{size:11}}},tooltip:{backgroundColor:'#090e17',borderColor:'#1c2e42',borderWidth:1,bodyColor:'#ccd8e8',titleColor:'#4d6278',callbacks:{label:ctx=>`${ctx.dataset.label}: ${fmt(ctx.raw)}`}}},
+    scales:{x:{grid:{color:'#132030'},ticks:{color:'#4d6278'}},y:{grid:{color:'#132030'},ticks:{color:'#4d6278',callback:v=>fmt(v)}}}
+  }});
+}
+
+function renderMCTab(){
+  document.getElementById('cards-grid').style.display='none';
+  document.getElementById('main-chart-section').style.display='none';
+  document.getElementById('table-section').style.display='none';
+  document.getElementById('compare-chart-section').style.display='none';
+  document.getElementById('kpi-strip').style.display='none';
+}
+
+// ── TAB SWITCHING ──────────────────────────────────────────────────────────
+function switchTab(t,btn){
+  currentTab=t;
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  if(btn)btn.classList.add('active'); else document.getElementById('tbtn-'+t).classList.add('active');
+  document.getElementById('tab-'+t).classList.add('active');
+  calculate();
+}
+
+function switchChartTab(t,btn){
+  currentChartTab=t;
+  document.querySelectorAll('.c-tab').forEach(b=>b.classList.remove('active'));
+  if(btn)btn.classList.add('active'); else document.getElementById('ctab-'+t)?.classList.add('active');
+  if(latestData.length){
+    const capital=parseFloat(document.getElementById('inp-capital').value)||0;
+    renderChart(latestData,capital);
+  }
+}
+
+// ── SLIDER HANDLERS ────────────────────────────────────────────────────────
+function onProjChange(){
+  const y=document.getElementById('slip-years').value;
+  const r=document.getElementById('slip-rate').value;
+  document.getElementById('lbl-years').innerText=`${y} Yıl`;
+  document.getElementById('lbl-rate').innerText=`%${r}`;
+  document.getElementById('mc-mean-display').innerText=`%${r}`;
+  document.getElementById('mc-years-display').innerText=`${y} yıl`;
+  calculate();
+}
+
+function quickSet(y,r){
+  document.getElementById('slip-years').value=y;
+  document.getElementById('slip-rate').value=r;
+  onProjChange();
+}
+
+// ── CASHFLOWS ──────────────────────────────────────────────────────────────
+function addCashflow(){
+  const y=parseInt(document.getElementById('cf-year').value);
+  const a=parseFloat(document.getElementById('cf-amount').value);
+  const n=document.getElementById('cf-note').value;
+  if(isNaN(y)||isNaN(a))return;
+  cashflows.push({id:Date.now(),year:y,amount:a,note:n||(a>=0?'Ek Giriş':'Ek Çekim')});
+  document.getElementById('cf-note').value='';
+  renderCashflows();
+  calculate();
+}
+
+function removeCashflow(id){cashflows=cashflows.filter(c=>c.id!==id);renderCashflows();calculate();}
+
+function renderCashflows(){
+  const list=document.getElementById('cf-list');
+  document.getElementById('cf-badge').innerText=cashflows.length?`(${cashflows.length})`:'';
+  list.innerHTML='';
+  cashflows.forEach(cf=>{
+    const div=document.createElement('div');div.className='cf-item';
+    div.innerHTML=`<span><span style="color:var(--muted)">Yıl ${cf.year}</span> <span style="color:${cf.amount>=0?'var(--green)':'var(--red)'};font-weight:700">${cf.amount>=0?'+':''}${fmt(cf.amount)}</span> <span style="color:var(--muted)">· ${cf.note}</span></span><button class="cf-remove" onclick="removeCashflow(${cf.id})">×</button>`;
+    list.appendChild(div);
+  });
+}
+
+// ── YIL YIL ────────────────────────────────────────────────────────────────
+function addYearRow(){
+  const maxY=customYears.length>0?Math.max(...customYears.map(r=>r.year)):0;
+  customYears.push({id:Date.now(),year:maxY+1,rate:22});
+  renderYearRows();calculate();
+}
+
+function removeYearRow(id){customYears=customYears.filter(r=>r.id!==id);renderYearRows();calculate();}
+
+function updateYearRate(id,val){
+  const yr=customYears.find(r=>r.id===id);if(yr){yr.rate=parseFloat(val)||0;}
+  const display=document.getElementById(`yr-display-${id}`);
+  if(display){display.innerText=`${yr.rate>0?'+':''}${yr.rate}%`;display.style.color=yr.rate>=0?'var(--green)':'var(--red)';}
+  calculate();
+}
+
+function renderYearRows(){
+  const list=document.getElementById('yr-list');list.innerHTML='';
+  [...customYears].sort((a,b)=>a.year-b.year).forEach(row=>{
+    const div=document.createElement('div');div.className='yr-item';
+    div.innerHTML=`
+      <div class="yr-item-header">
+        <span class="yr-label">YIL ${row.year}</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span class="yr-rate-display" id="yr-display-${row.id}" style="color:${row.rate>=0?'var(--green)':'var(--red)'}">${row.rate>0?'+':''}${row.rate}%</span>
+          <button class="yr-remove" onclick="removeYearRow(${row.id})">×</button>
+        </div>
+      </div>
+      <input type="range" min="-30" max="150" step="0.5" value="${row.rate}" class="custom-slider ${row.rate>=0?'slider-green':''}" oninput="updateYearRate(${row.id},this.value)">
+      <div class="range-labels"><span>-30%</span><span>150%</span></div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function toggleBulk(){
+  const w=document.getElementById('bulk-wrapper');
+  w.style.display=w.style.display==='none'?'block':'none';
+}
+
+function applyBulk(){
+  const vals=document.getElementById('bulk-input').value.split(/[,;\s\n]+/).map(s=>parseFloat(s.trim())).filter(n=>!isNaN(n));
+  if(!vals.length)return;
+  customYears=vals.map((r,i)=>({id:Date.now()+i,year:i+1,rate:r}));
+  renderYearRows();calculate();
+  document.getElementById('bulk-wrapper').style.display='none';
+}
+
+// ── COMPARE SCENARIOS ─────────────────────────────────────────────────────
+function addScenario(){
+  if(compareScenarios.length>=5)return;
+  const name=document.getElementById('sc-name').value||`Senaryo ${compareScenarios.length+1}`;
+  const y=parseInt(document.getElementById('slip-sc-years').value)||15;
+  const r=parseFloat(document.getElementById('slip-sc-rate').value)||0;
+  compareScenarios.push({id:Date.now(),years:y,rate:r,label:name});
+  document.getElementById('sc-name').value=`Senaryo ${compareScenarios.length+1}`;
+  renderScenarioList();calculate();
+}
+
+function removeScenario(id){compareScenarios=compareScenarios.filter(s=>s.id!==id);renderScenarioList();calculate();}
+
+function renderScenarioList(){
+  const list=document.getElementById('sc-list');list.innerHTML='';
+  compareScenarios.forEach((sc,i)=>{
+    const capital=parseFloat(document.getElementById('inp-capital').value)||0;
+    const annualW=(parseFloat(document.getElementById('inp-monthly').value)||0)*12;
+    const inf=parseFloat(document.getElementById('inp-inf').value)||0;
+    const d=simulate(sc.years,sc.rate,capital,annualW,cashflows,inf);
+    const fin=d[d.length-1].balance;
+    const div=document.createElement('div');div.className='sc-item';
+    div.style.borderColor=SC_COLORS[i%5];
+    div.innerHTML=`
+      <div>
+        <div style="font-size:13px;font-weight:700;color:${SC_COLORS[i%5]}">${sc.label}</div>
+        <div style="font-size:10px;color:var(--muted);margin-top:2px">${sc.years}y · %${sc.rate} · <span style="color:${SC_COLORS[i%5]};font-family:monospace">${fmt(fin)}</span></div>
+      </div>
+      <button class="cf-remove" style="font-size:18px" onclick="removeScenario(${sc.id})">×</button>
+    `;
+    list.appendChild(div);
+  });
+}
+
+// ── PDF ─────────────────────────────────────────────────────────────────────
+function openPDF(){
+  if(!latestMetrics||!latestData.length)return;
+  const m=latestMetrics;
+  const capital=parseFloat(document.getElementById('inp-capital').value)||0;
+  const monthly=parseFloat(document.getElementById('inp-monthly').value)||0;
+  const inf=parseFloat(document.getElementById('inp-inf').value)||0;
+  const now=new Date().toLocaleDateString('tr-TR',{year:'numeric',month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+
+  document.getElementById('pdf-subtitle').innerText=`${now} · ${fmt(capital)} ana para · ${fmt(monthly)}/ay · Enflasyon %${inf}`;
+
+  // Exec summary
+  const execItems=[
+    ['Analiz Modu',currentTab==='proj'?'Projeksiyon':currentTab==='find'?'Getiri Bul':'Yıl Yıl','#38bdf8'],
+    ['Sürdürülebilirlik',m.ruined?`❌ Yıl ${m.ruinYear}'de Tükendi`:'✓ Sürdürülebilir',m.ruined?'#f87171':'#34d399'],
+    ['Son Bakiye (Nominal)',m.finalBal>0?fmt(m.finalBal):'TÜKENDİ',m.finalBal>0?'#38bdf8':'#f87171'],
+    ['Son Bakiye (Reel)',m.finalReal>0?fmt(m.finalReal):'TÜKENDİ','#2dd4bf'],
+    ['CAGR / XIRR',`${fmtPct(m.cagr)} / ${fmtPct(m.xirrVal)}`,'#34d399'],
+    ['Break-Even Yılı',m.breakEvenYear?`Yıl ${m.breakEvenYear}`:'Gerçekleşmedi','#f59e0b'],
+    ['Sharpe / Sortino',`${m.sharpe!=null?m.sharpe.toFixed(2):'—'} / ${m.sortino!=null?m.sortino.toFixed(2):'—'}`,'#f59e0b'],
+    latestMC?['MC Hayatta Kalma',`%${latestMC.survivalRate.toFixed(1)}`,latestMC.survivalRate>70?'#34d399':'#f87171']:['Net Kazanç',fmt(m.totalGain),m.totalGain>0?'#34d399':'#f87171']
+  ];
+  document.getElementById('pdf-exec-grid').innerHTML=execItems.map(([l,v,c])=>
+    `<div><span style="color:#94a3b8">${l}: </span><span style="color:${c};font-weight:700;font-family:monospace">${v}</span></div>`
+  ).join('');
+
+  // Params
+  const annualW=monthly*12;
+  document.getElementById('pdf-params').innerHTML=[
+    ['Ana Para',fmt(capital),'#38bdf8'],['Aylık Çekim',`${fmt(monthly)}/ay`,'#fb923c'],
+    ['Yıllık Çekim',fmt(annualW),'#fb923c'],['Enflasyon',`%${inf}`,'#2dd4bf'],
+    ['Süre',`${m.years} yıl`,'#0f172a'],['Toplam Çekim',fmt(m.totalWithdrawn),'#fb923c'],
+    ['Net Kazanç',fmt(m.totalGain),m.totalGain>0?'#059669':'#dc2626'],
+    ['Toplam Getiri',fmtPct(m.totalReturn),m.totalReturn>0?'#059669':'#dc2626']
+  ].map(([l,v,c])=>`<div class="pdf-mcard"><div class="pdf-mcard-label">${l}</div><div class="pdf-mcard-val" style="color:${c}">${v}</div></div>`).join('');
+
+  // Metrics A
+  document.getElementById('pdf-metrics-a').innerHTML=[
+    ['CAGR',fmtPct(m.cagr),'Bileşik yıllık büyüme',(m.cagr??0)>0?'#059669':'#dc2626'],
+    ['XIRR',fmtPct(m.xirrVal),'İç verim oranı',(m.xirrVal??0)>0?'#059669':'#dc2626'],
+    ['TWRR',fmtPct(m.twrr),'Zaman ağırlıklı getiri',(m.twrr??0)>0?'#059669':'#dc2626'],
+    ['Max Drawdown',`-${m.maxDD.toFixed(1)}%`,'Zirveden max düşüş','#dc2626']
+  ].map(([l,v,s,c])=>`<div class="pdf-mcard"><div class="pdf-mcard-label">${l}</div><div class="pdf-mcard-val" style="color:${c}">${v}</div><div class="pdf-mcard-sub">${s}</div></div>`).join('');
+
+  document.getElementById('pdf-metrics-b').innerHTML=[
+    ['Volatilite',`${m.vol.toFixed(1)}%`,'Getiri std sapması','#d97706'],
+    ['Sharpe',m.sharpe!=null?m.sharpe.toFixed(2):'—','Risk/getiri (rf=%3)',(m.sharpe??0)>1?'#059669':(m.sharpe??0)>0?'#d97706':'#94a3b8'],
+    ['Sortino',m.sortino!=null?m.sortino.toFixed(2):'—','Aşağı yön riski',(m.sortino??0)>1?'#059669':'#d97706'],
+    ['Calmar',m.calmar!=null?m.calmar.toFixed(2):'—','CAGR/MaxDD',(m.calmar??0)>0.5?'#059669':'#d97706'],
+    ['Break-Even',m.breakEvenYear?`Yıl ${m.breakEvenYear}`:'Yok','Getiri > Çekim',m.breakEvenYear?'#d97706':'#94a3b8'],
+    ['Reel Son Bakiye',m.finalReal>0?fmt(m.finalReal):'TÜKENDİ','Enflasyon düzeltmeli',m.finalReal>0?'#2dd4bf':'#dc2626'],
+    ['Ort. Yıllık Getiri',fmtPct(m.mean),'Ortalama',m.mean>0?'#059669':'#dc2626'],
+    [latestMC?'MC Hayatta Kalma':'Sürdürülebilir',latestMC?`%${latestMC.survivalRate.toFixed(1)}`:m.ruined?`Yıl ${m.ruinYear}`:'✓ Evet','Monte Carlo / Sürdürülebilirlik',latestMC?(parseFloat(latestMC.survivalRate)>70?'#059669':'#dc2626'):m.ruined?'#dc2626':'#059669']
+  ].map(([l,v,s,c])=>`<div class="pdf-mcard"><div class="pdf-mcard-label">${l}</div><div class="pdf-mcard-val" style="color:${c}">${v}</div><div class="pdf-mcard-sub">${s}</div></div>`).join('');
+
+  // Cashflows
+  const cfTitle=document.getElementById('pdf-cf-title');
+  const cfTable=document.getElementById('pdf-cf-table');
+  if(cashflows.length){
+    cfTitle.style.display='block';cfTable.style.display='table';
+    const tbody=document.getElementById('pdf-cf-body');tbody.innerHTML='';
+    cashflows.forEach(cf=>{
+      const tr=document.createElement('tr');tr.style.borderBottom='1px solid #f1f5f9';
+      tr.innerHTML=`<td style="padding:6px 9px;font-family:monospace">Yıl ${cf.year}</td><td style="padding:6px 9px;font-family:monospace;font-weight:700;color:${cf.amount>=0?'#059669':'#dc2626'}">${cf.amount>=0?'+':''}${fmt(cf.amount)}</td><td style="padding:6px 9px">${cf.note}</td>`;
+      tbody.appendChild(tr);
+    });
+  } else {
+    cfTitle.style.display='none';cfTable.style.display='none';
+    document.getElementById('pdf-table-title').innerText='3. Yıl Bazlı Performans Tablosu';
+  }
+
+  // Year table
+  const tbody=document.getElementById('pdf-tbody');tbody.innerHTML='';
+  latestData.slice(1).forEach(row=>{
+    const isNeg=row.balance<=0;
+    const hasCF=row.cashflow!==0;
+    const tr=document.createElement('tr');
+    tr.style.borderBottom='1px solid #f1f5f9';
+    tr.style.background=row.year%2===0?'#fafafa':'#fff';
+    tr.innerHTML=`
+      <td style="padding:6px 9px;font-weight:600">Yıl ${row.year}</td>
+      <td style="padding:6px 9px;color:${row.r>=0?'#059669':'#dc2626'};font-weight:700">%${(row.r||0).toFixed(1)}</td>
+      <td style="padding:6px 9px;font-family:monospace;color:#10b981">+${fmt(row.cumInt)}</td>
+      <td style="padding:6px 9px;font-family:monospace;color:#ef4444">-${fmt(row.cumW)}</td>
+      <td style="padding:6px 9px;font-family:monospace;font-weight:700;color:${hasCF?(row.cashflow>0?'#059669':'#dc2626'):'#94a3b8'}">${hasCF?(row.cashflow>0?'+':'')+fmt(row.cashflow):'—'}</td>
+      <td style="padding:6px 9px;font-family:monospace;font-weight:700;color:${isNeg?'#dc2626':'#0284c7'}">${isNeg?'TÜKENDİ':fmt(row.balance)}</td>
+      <td style="padding:6px 9px;font-family:monospace;font-weight:700;color:${isNeg?'#dc2626':'#0d9488'}">${isNeg?'TÜKENDİ':fmt(row.realBalance)}</td>
+      <td style="padding:6px 9px;font-family:monospace;color:${row.dd<-5?'#dc2626':'#94a3b8'}">${row.dd<0?row.dd.toFixed(1)+'%':'—'}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('pdf-overlay').classList.add('open');
+}
+
+function closePDF(){document.getElementById('pdf-overlay').classList.remove('open');}
+
+// ── INIT ───────────────────────────────────────────────────────────────────
+renderYearRows();
+calculate();
+</script>
+</body>
+</html>
